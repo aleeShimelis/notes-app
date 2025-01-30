@@ -14,7 +14,6 @@ class NotesStorage {
     return File('$path/notes.json');
   }
 
-  // Load notes from JSON file
   static Future<List<Note>> loadNotes() async {
     try {
       final file = await _localFile;
@@ -26,7 +25,6 @@ class NotesStorage {
     }
   }
 
-  // Save notes to JSON file
   static Future<File> saveNotes(List<Note> notes) async {
     final file = await _localFile;
     final jsonNotes = notes.map((note) => note.toJson()).toList();

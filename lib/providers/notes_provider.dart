@@ -5,23 +5,36 @@ import '../services/notes_storage.dart';
 class NotesProvider with ChangeNotifier {
   List<Note> _notes = [];
   String _searchQuery = '';
+  String _categoryFilter = 'All';
 
-  List<Note> get notes => _searchQuery.isEmpty
-      ? _notes
-      : _notes.where((note) => note.title.contains(_searchQuery)).toList();
+  List<Note> get notes {
+    List<Note> filteredNotes = _notes;
+    if (_searchQuery.isNotEmpty) {
+      filteredNotes = filteredNotes.where((note) =>
+          note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          note.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    }
+    if (_categoryFilter != 'All') {
+      filteredNotes = filteredNotes.where((note) => note.category == _categoryFilter).toList();
+    }
+    return filteredNotes;
+  }
 
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
   }
 
-  // Load notes from storage on app startup
+  void setCategoryFilter(String category) {
+    _categoryFilter = category;
+    notifyListeners();
+  }
+
   Future<void> loadNotes() async {
     _notes = await NotesStorage.loadNotes();
     notifyListeners();
   }
 
-  // Save notes after every change
   Future<void> _saveNotes() async {
     await NotesStorage.saveNotes(_notes);
   }
@@ -29,24 +42,27 @@ class NotesProvider with ChangeNotifier {
   void addNote(Note note) {
     _notes.add(note);
     notifyListeners();
-    _saveNotes(); // Auto-save
+    _saveNotes();
   }
 
-  void updateNote(String id, String newTitle, String newContent) {
+  void updateNote(String id, String newTitle, String newContent, String newCategory) {
     final index = _notes.indexWhere((note) => note.id == id);
-    _notes[index] = Note(
-      id: id,
-      title: newTitle,
-      content: newContent,
-      date: DateTime.now(),
-    );
-    notifyListeners();
-    _saveNotes(); // Auto-save
+    if (index != -1) {
+      _notes[index] = Note(
+        id: id,
+        title: newTitle,
+        content: newContent,
+        date: DateTime.now(),
+        category: newCategory,
+      );
+      notifyListeners();
+      _saveNotes();
+    }
   }
 
   void deleteNote(String id) {
     _notes.removeWhere((note) => note.id == id);
     notifyListeners();
-    _saveNotes(); // Auto-save
+    _saveNotes();
   }
 }
