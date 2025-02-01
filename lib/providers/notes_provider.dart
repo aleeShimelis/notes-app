@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/note.dart';
 import '../services/notes_storage.dart';
+import '../services/notification_service.dart';
 
 class NotesProvider with ChangeNotifier {
   List<Note> _notes = [];
@@ -10,16 +11,26 @@ class NotesProvider with ChangeNotifier {
   List<Note> get notes {
     List<Note> filteredNotes = _notes;
 
+    
     if (_searchQuery.isNotEmpty) {
       filteredNotes = filteredNotes.where((note) =>
           note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           note.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
 
+    // Filter by selected categories
     if (_selectedTags.isNotEmpty) {
       filteredNotes = filteredNotes.where((note) =>
           _selectedTags.every((tag) => note.tags.contains(tag))).toList();
     }
+
+    // Pinned notes to appear at the top
+    filteredNotes.sort((a, b) {
+      if (a.isPinned == b.isPinned) {
+        return b.date.compareTo(a.date); // Sort by latest date
+      }
+      return b.isPinned ? 1 : -1;
+    });
 
     return filteredNotes;
   }
@@ -30,7 +41,7 @@ class NotesProvider with ChangeNotifier {
   }
 
   void setTagsFilter(List<String> tags) {
-    _selectedTags = [...tags]; // Ensuring state change
+    _selectedTags = [...tags];
     notifyListeners();
   }
 
@@ -47,13 +58,25 @@ class NotesProvider with ChangeNotifier {
     await NotesStorage.saveNotes(_notes);
   }
 
+  
   void addNote(Note note) {
     _notes.add(note);
     _saveNotes();
     notifyListeners();
+
+    
+    if (note.reminder != null) {
+      NotificationService.scheduleNotification(
+        note.id,
+        "Reminder for ${note.title}",
+        "Don't forget your note!",
+        note.reminder!,
+      );
+    }
   }
 
-  void updateNote(String id, String newTitle, String newContent, List<String> newTags) {
+
+  void updateNote(String id, String newTitle, String newContent, List<String> newTags, bool isPinned) {
     final index = _notes.indexWhere((note) => note.id == id);
     if (index != -1) {
       _notes[index] = Note(
@@ -62,15 +85,61 @@ class NotesProvider with ChangeNotifier {
         content: newContent,
         date: DateTime.now(),
         tags: newTags,
+        isPinned: isPinned,
+        reminder: _notes[index].reminder, // Keep the reminder
       );
       _saveNotes();
       notifyListeners();
     }
   }
 
+ 
   void deleteNote(String id) {
     _notes.removeWhere((note) => note.id == id);
     _saveNotes();
     notifyListeners();
+
+    // Cancel notification if the note had a reminder
+    NotificationService.cancelNotification(id);
+  }
+
+
+  void togglePinStatus(String id) {
+    final index = _notes.indexWhere((note) => note.id == id);
+    if (index != -1) {
+      _notes[index].isPinned = !_notes[index].isPinned;
+      _saveNotes();
+      notifyListeners();
+    }
+  }
+
+
+  void setReminder(String id, DateTime? reminder) {
+    final index = _notes.indexWhere((note) => note.id == id);
+    if (index != -1) {
+      _notes[index] = Note(
+        id: _notes[index].id,
+        title: _notes[index].title,
+        content: _notes[index].content,
+        date: _notes[index].date,
+        tags: _notes[index].tags,
+        isPinned: _notes[index].isPinned,
+        reminder: reminder,
+      );
+
+      if (reminder != null) {
+        NotificationService.scheduleNotification(
+          id,
+          "Reminder for ${_notes[index].title}",
+          "Don't forget your note!",
+          reminder,
+        );
+      } else {
+        NotificationService.cancelNotification(id);
+      }
+
+      _saveNotes();
+      notifyListeners();
+    }
   }
 }

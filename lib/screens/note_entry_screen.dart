@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 
@@ -17,7 +18,8 @@ class NoteEntryScreen extends StatefulWidget {
 class _NoteEntryScreenState extends State<NoteEntryScreen> {
   final TextEditingController _titleController = TextEditingController();
   late quill.QuillController _controller;
-
+  bool _isPinned = false;
+  DateTime? _reminder;
   List<String> _selectedTags = [];
   final List<String> availableTags = ['Work', 'Personal', 'Ideas', 'Urgent'];
 
@@ -26,6 +28,8 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
     super.initState();
     _titleController.text = widget.note?.title ?? '';
     _selectedTags = widget.note?.tags ?? [];
+    _isPinned = widget.note?.isPinned ?? false;
+    _reminder = widget.note?.reminder;
 
     try {
       final contentJson = widget.note?.content.isNotEmpty ?? false
@@ -40,11 +44,45 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
     }
   }
 
+  void _pickReminder() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _reminder ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          _reminder = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
+    }
+  }
+
+  void _removeReminder() {
+    setState(() {
+      _reminder = null;
+    });
+  }
+
   void _saveNote() {
     if (_titleController.text.isEmpty) return;
 
-    final contentJson = jsonEncode(_controller.document.toDelta().toJson());
     final notesProvider = Provider.of<NotesProvider>(context, listen: false);
+    final contentJson = jsonEncode(_controller.document.toDelta().toJson());
 
     if (widget.note == null) {
       notesProvider.addNote(Note(
@@ -53,6 +91,8 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
         content: contentJson,
         date: DateTime.now(),
         tags: _selectedTags,
+        isPinned: _isPinned,
+        reminder: _reminder,
       ));
     } else {
       notesProvider.updateNote(
@@ -60,7 +100,9 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
         _titleController.text,
         contentJson,
         _selectedTags,
+        _isPinned,
       );
+      notesProvider.setReminder(widget.note!.id, _reminder);
     }
 
     Navigator.pop(context);
@@ -69,7 +111,22 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.note == null ? 'New Note' : 'Edit Note')),
+      appBar: AppBar(
+        title: Text(widget.note == null ? 'New Note' : 'Edit Note'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+              color: _isPinned ? Colors.blue : Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                _isPinned = !_isPinned;
+              });
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -96,6 +153,32 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
                   },
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+            // Reminder Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _reminder == null
+                      ? "No Reminder Set"
+                      : "Reminder: ${DateFormat('MMM dd, yyyy – HH:mm').format(_reminder!)}",
+                  style: TextStyle(color: _reminder == null ? Colors.grey : Colors.red),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.alarm, color: Colors.red),
+                      onPressed: _pickReminder,
+                    ),
+                    if (_reminder != null)
+                      IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.red),
+                        onPressed: _removeReminder,
+                      ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             quill.QuillToolbar.simple(controller: _controller),

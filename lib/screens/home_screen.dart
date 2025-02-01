@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/notes_provider.dart';
 import 'note_entry_screen.dart';
-import '../utils/extensions.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final notesProvider = Provider.of<NotesProvider>(context);
+    final notes = notesProvider.notes;
 
     return Scaffold(
       appBar: AppBar(
@@ -26,7 +26,11 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<String>(
             onSelected: (tag) {
               setState(() {
-                _selectedTags.toggleItem(tag);
+                if (_selectedTags.contains(tag)) {
+                  _selectedTags.remove(tag);
+                } else {
+                  _selectedTags.add(tag);
+                }
               });
               notesProvider.setTagsFilter(_selectedTags);
             },
@@ -42,28 +46,128 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: notesProvider.notes.isEmpty
-          ? const Center(child: Text('No notes yet!'))
-          : ListView.builder(
-              itemCount: notesProvider.notes.length,
-              itemBuilder: (context, index) {
-                final note = notesProvider.notes[index];
-                return ListTile(
-                  title: Text(note.title),
-                  subtitle: Text(DateFormat('MMM dd, yyyy').format(note.date)),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (context) => NoteEntryScreen(note: note),
-                  )),
-                );
-              },
+      body: Column(
+        children: [
+         
+          if (_selectedTags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Wrap(
+                spacing: 8.0,
+                children: _selectedTags.map((tag) {
+                  return Chip(
+                    label: Text(tag),
+                    deleteIcon: const Icon(Icons.close),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedTags.remove(tag);
+                      });
+                      notesProvider.setTagsFilter(_selectedTags);
+                    },
+                  );
+                }).toList(),
+              ),
             ),
+          Expanded(
+            child: notes.isEmpty
+                ? const Center(child: Text('No notes found!'))
+                : ListView.builder(
+                    itemCount: notes.length,
+                    itemBuilder: (context, index) {
+                      final note = notes[index];
+                      return ListTile(
+                        title: Text(note.title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(DateFormat('MMM dd, yyyy').format(note.date)),
+                            if (note.reminder != null)
+                              Row(
+                                children: [
+                                  const Icon(Icons.alarm, size: 16, color: Colors.red),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Reminder: ${DateFormat('MMM dd, yyyy – HH:mm').format(note.reminder!)}",
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            
+                            if (note.tags.isNotEmpty)
+                              Wrap(
+                                spacing: 4.0,
+                                children: note.tags.map((tag) {
+                                  return Chip(
+                                    label: Text(tag, style: const TextStyle(fontSize: 10)),
+                                    visualDensity: VisualDensity.compact,
+                                  );
+                                }).toList(),
+                              ),
+                            IconButton(
+                              icon: Icon(
+                                note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                                color: note.isPinned ? Colors.blue : Colors.grey,
+                              ),
+                              onPressed: () {
+                                notesProvider.togglePinStatus(note.id);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red), // 🗑️ DELETE BUTTON
+                              onPressed: () {
+                                _confirmDelete(context, notesProvider, note.id);
+                              },
+                            ),
+                          ],
+                        ),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => NoteEntryScreen(note: note)),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const NoteEntryScreen()),
         ),
-        child: const Icon(Icons.add),
+        backgroundColor: Colors.green, // ✅ Set button color to green
+        child: const Icon(Icons.add, color: Colors.white),
       ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, NotesProvider provider, String noteId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Delete Note"),
+          content: const Text("Are you sure you want to delete this note?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                provider.deleteNote(noteId);
+                Navigator.pop(context);
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

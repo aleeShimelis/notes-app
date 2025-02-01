@@ -4,6 +4,8 @@ class Note {
   final String content;
   final DateTime date;
   final List<String> tags;
+  bool isPinned;
+  DateTime? reminder; // New field for reminders
 
   Note({
     required this.id,
@@ -11,6 +13,8 @@ class Note {
     required this.content,
     required this.date,
     required this.tags,
+    this.isPinned = false,
+    this.reminder, // Nullable reminder
   });
 
   Map<String, dynamic> toJson() {
@@ -20,6 +24,8 @@ class Note {
       'content': content,
       'date': date.toIso8601String(),
       'tags': tags,
+      'isPinned': isPinned,
+      'reminder': reminder?.toIso8601String(), // Save reminder
     };
   }
 
@@ -30,6 +36,8 @@ class Note {
       content: json['content'],
       date: DateTime.parse(json['date']),
       tags: List<String>.from(json['tags'] ?? []),
+      isPinned: json['isPinned'] ?? false,
+      reminder: json['reminder'] != null ? DateTime.parse(json['reminder']) : null,
     );
   }
 }
