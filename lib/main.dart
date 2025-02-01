@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/notes_provider.dart';
 import 'screens/home_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       darkTheme: ThemeData(
         brightness: Brightness.dark,
       ),
-      home: HomeScreen(),
+      home: const HomeScreen(),
     );
   }
 }

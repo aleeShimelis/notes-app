@@ -5,18 +5,22 @@ import '../services/notes_storage.dart';
 class NotesProvider with ChangeNotifier {
   List<Note> _notes = [];
   String _searchQuery = '';
-  String _categoryFilter = 'All';
+  List<String> _selectedTags = [];
 
   List<Note> get notes {
     List<Note> filteredNotes = _notes;
+
     if (_searchQuery.isNotEmpty) {
       filteredNotes = filteredNotes.where((note) =>
           note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           note.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
-    if (_categoryFilter != 'All') {
-      filteredNotes = filteredNotes.where((note) => note.category == _categoryFilter).toList();
+
+    if (_selectedTags.isNotEmpty) {
+      filteredNotes = filteredNotes.where((note) =>
+          _selectedTags.every((tag) => note.tags.contains(tag))).toList();
     }
+
     return filteredNotes;
   }
 
@@ -25,13 +29,17 @@ class NotesProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setCategoryFilter(String category) {
-    _categoryFilter = category;
+  void setTagsFilter(List<String> tags) {
+    _selectedTags = [...tags]; // Ensuring state change
     notifyListeners();
   }
 
   Future<void> loadNotes() async {
-    _notes = await NotesStorage.loadNotes();
+    try {
+      _notes = await NotesStorage.loadNotes();
+    } catch (e) {
+      _notes = [];
+    }
     notifyListeners();
   }
 
@@ -41,11 +49,11 @@ class NotesProvider with ChangeNotifier {
 
   void addNote(Note note) {
     _notes.add(note);
-    notifyListeners();
     _saveNotes();
+    notifyListeners();
   }
 
-  void updateNote(String id, String newTitle, String newContent, String newCategory) {
+  void updateNote(String id, String newTitle, String newContent, List<String> newTags) {
     final index = _notes.indexWhere((note) => note.id == id);
     if (index != -1) {
       _notes[index] = Note(
@@ -53,16 +61,16 @@ class NotesProvider with ChangeNotifier {
         title: newTitle,
         content: newContent,
         date: DateTime.now(),
-        category: newCategory,
+        tags: newTags,
       );
-      notifyListeners();
       _saveNotes();
+      notifyListeners();
     }
   }
 
   void deleteNote(String id) {
     _notes.removeWhere((note) => note.id == id);
-    notifyListeners();
     _saveNotes();
+    notifyListeners();
   }
 }

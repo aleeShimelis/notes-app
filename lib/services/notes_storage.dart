@@ -17,10 +17,15 @@ class NotesStorage {
   static Future<List<Note>> loadNotes() async {
     try {
       final file = await _localFile;
+      if (!await file.exists()) return [];
+
       final contents = await file.readAsString();
+      if (contents.trim().isEmpty) return [];
+
       final List<dynamic> jsonNotes = jsonDecode(contents);
       return jsonNotes.map((json) => Note.fromJson(json)).toList();
     } catch (e) {
+      print("Error loading notes: $e");
       return [];
     }
   }

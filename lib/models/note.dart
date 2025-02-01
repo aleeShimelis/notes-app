@@ -1,27 +1,17 @@
 class Note {
-  String id;
-  String title;
-  String content; // Rich text content (JSON)
-  DateTime date;
-  String category;
+  final String id;
+  final String title;
+  final String content;
+  final DateTime date;
+  final List<String> tags;
 
   Note({
     required this.id,
     required this.title,
     required this.content,
     required this.date,
-    this.category = 'Uncategorized',
+    required this.tags,
   });
-
-  factory Note.fromJson(Map<String, dynamic> json) {
-    return Note(
-      id: json['id'],
-      title: json['title'],
-      content: json['content'],
-      date: DateTime.parse(json['date']),
-      category: json['category'] ?? 'Uncategorized',
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -29,7 +19,17 @@ class Note {
       'title': title,
       'content': content,
       'date': date.toIso8601String(),
-      'category': category,
+      'tags': tags,
     };
+  }
+
+  static Note fromJson(Map<String, dynamic> json) {
+    return Note(
+      id: json['id'],
+      title: json['title'],
+      content: json['content'],
+      date: DateTime.parse(json['date']),
+      tags: List<String>.from(json['tags'] ?? []),
+    );
   }
 }

@@ -3,14 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/notes_provider.dart';
 import 'note_entry_screen.dart';
+import '../utils/extensions.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedCategory = 'All';
+  List<String> _selectedTags = [];
 
   @override
   Widget build(BuildContext context) {
@@ -18,63 +21,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Notes'),
+        title: const Text('Notes'),
         actions: [
-          DropdownButton<String>(
-            value: _selectedCategory,
-            items: ['All', 'Work', 'Personal', 'Shopping', 'Uncategorized']
-                .map((category) {
-              return DropdownMenuItem(
-                value: category,
-                child: Text(category),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedCategory = value;
-                });
-                notesProvider.setCategoryFilter(_selectedCategory);
-              }
+          PopupMenuButton<String>(
+            onSelected: (tag) {
+              setState(() {
+                _selectedTags.toggleItem(tag);
+              });
+              notesProvider.setTagsFilter(_selectedTags);
+            },
+            itemBuilder: (context) {
+              return ['Work', 'Personal', 'Ideas', 'Urgent'].map((tag) {
+                return CheckedPopupMenuItem(
+                  value: tag,
+                  checked: _selectedTags.contains(tag),
+                  child: Text(tag),
+                );
+              }).toList();
             },
           ),
         ],
       ),
       body: notesProvider.notes.isEmpty
-          ? Center(child: Text('No notes yet!'))
+          ? const Center(child: Text('No notes yet!'))
           : ListView.builder(
               itemCount: notesProvider.notes.length,
               itemBuilder: (context, index) {
                 final note = notesProvider.notes[index];
-                return Card(
-                  margin: EdgeInsets.all(8),
-                  child: ListTile(
-                    title: Text(note.title),
-                    subtitle: Text(
-                      '${note.content}\n${DateFormat('MMM dd, yyyy – hh:mm a').format(note.date)}',
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () => notesProvider.deleteNote(note.id),
-                    ),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NoteEntryScreen(note: note),
-                      ),
-                    ),
-                  ),
+                return ListTile(
+                  title: Text(note.title),
+                  subtitle: Text(DateFormat('MMM dd, yyyy').format(note.date)),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (context) => NoteEntryScreen(note: note),
+                  )),
                 );
               },
             ),
       floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => NoteEntryScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const NoteEntryScreen()),
         ),
+        child: const Icon(Icons.add),
       ),
     );
   }

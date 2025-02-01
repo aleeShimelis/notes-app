@@ -11,45 +11,33 @@ class NoteEntryScreen extends StatefulWidget {
   const NoteEntryScreen({super.key, this.note});
 
   @override
-  // ignore: library_private_types_in_public_api
   _NoteEntryScreenState createState() => _NoteEntryScreenState();
 }
 
 class _NoteEntryScreenState extends State<NoteEntryScreen> {
-  final List<String> categories = ['Work', 'Personal', 'Shopping', 'Uncategorized'];
+  final TextEditingController _titleController = TextEditingController();
   late quill.QuillController _controller;
-  late TextEditingController _titleController;
-  late String _selectedCategory;
-  late FocusNode _focusNode; // Focus node for QuillEditor
+
+  List<String> _selectedTags = [];
+  final List<String> availableTags = ['Work', 'Personal', 'Ideas', 'Urgent'];
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.note?.title ?? '');
-    _selectedCategory = widget.note?.category ?? 'Uncategorized';
-    _focusNode = FocusNode();
+    _titleController.text = widget.note?.title ?? '';
+    _selectedTags = widget.note?.tags ?? [];
 
-    if (widget.note != null) {
-      try {
-        final contentJson = jsonDecode(widget.note!.content);
-        _controller = quill.QuillController(
-          document: quill.Document.fromJson(contentJson),
-          selection: const TextSelection.collapsed(offset: 0),
-        );
-      } catch (e) {
-        _controller = quill.QuillController.basic();
-      }
-    } else {
+    try {
+      final contentJson = widget.note?.content.isNotEmpty ?? false
+          ? jsonDecode(widget.note!.content)
+          : [];
+      _controller = quill.QuillController(
+        document: quill.Document.fromJson(contentJson),
+        selection: const TextSelection.collapsed(offset: 0),
+      );
+    } catch (e) {
       _controller = quill.QuillController.basic();
     }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
   }
 
   void _saveNote() {
@@ -59,21 +47,19 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
     final notesProvider = Provider.of<NotesProvider>(context, listen: false);
 
     if (widget.note == null) {
-      notesProvider.addNote(
-        Note(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: _titleController.text,
-          content: contentJson,
-          date: DateTime.now(),
-          category: _selectedCategory,
-        ),
-      );
+      notesProvider.addNote(Note(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text,
+        content: contentJson,
+        date: DateTime.now(),
+        tags: _selectedTags,
+      ));
     } else {
       notesProvider.updateNote(
         widget.note!.id,
         _titleController.text,
         contentJson,
-        _selectedCategory,
+        _selectedTags,
       );
     }
 
@@ -95,31 +81,24 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              items: categories.map((category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Text(category),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8.0,
+              children: availableTags.map((tag) {
+                final isSelected = _selectedTags.contains(tag);
+                return FilterChip(
+                  label: Text(tag),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      isSelected ? _selectedTags.remove(tag) : _selectedTags.add(tag);
+                    });
+                  },
                 );
               }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategory = value!;
-                });
-              },
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-              ),
             ),
             const SizedBox(height: 16),
-            
-            // QUILL TOOLBAR
             quill.QuillToolbar.simple(controller: _controller),
-
-            // QUILL EDITOR
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8),
@@ -129,12 +108,10 @@ class _NoteEntryScreenState extends State<NoteEntryScreen> {
                 ),
                 child: quill.QuillEditor.basic(
                   controller: _controller,
-                  focusNode: _focusNode,
-                  //readOnly: false, // Allow editing
+                  focusNode: FocusNode(),
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _saveNote,
