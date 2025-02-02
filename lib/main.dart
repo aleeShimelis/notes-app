@@ -6,7 +6,11 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
-  await Firebase.initializeApp(); // Initialize Firebase
+  try {
+    await Firebase.initializeApp(); // Initialize Firebase
+  } catch (e) {
+    print("Firebase initialization failed: $e");
+  }
   runApp(
     ChangeNotifierProvider(
       create: (context) => NotesProvider()..loadNotes(),

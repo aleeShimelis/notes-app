@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notes'),
+        title: const Text("Notes"),
         actions: [
           PopupMenuButton<String>(
             onSelected: (tag) {
@@ -35,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
               notesProvider.setTagsFilter(_selectedTags);
             },
             itemBuilder: (context) {
-              return ['Work', 'Personal', 'Ideas', 'Urgent'].map((tag) {
+              return ["Work", "Personal", "Ideas", "Urgent"].map((tag) {
                 return CheckedPopupMenuItem(
                   value: tag,
                   checked: _selectedTags.contains(tag),
@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-         
           if (_selectedTags.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -97,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            
                             if (note.tags.isNotEmpty)
                               Wrap(
                                 spacing: 4.0,
@@ -118,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red), // 🗑️ DELETE BUTTON
+                              icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () {
                                 _confirmDelete(context, notesProvider, note.id);
                               },
@@ -140,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(builder: (context) => const NoteEntryScreen()),
         ),
-        backgroundColor: Colors.green, // ✅ Set button color to green
+        backgroundColor: Colors.green,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

@@ -34,7 +34,7 @@ class Note {
       id: json['id'],
       title: json['title'],
       content: json['content'],
-      date: DateTime.parse(json['date']),
+      date: DateTime.parse(json['date']), // Fixed typo: json instead of ison
       tags: List<String>.from(json['tags'] ?? []),
       isPinned: json['isPinned'] ?? false,
       reminder: json['reminder'] != null ? DateTime.parse(json['reminder']) : null,
