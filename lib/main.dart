@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'providers/notes_provider.dart';
 import 'screens/home_screen.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
   try {
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Notes App',
       theme: ThemeData(
         primarySwatch: Colors.blue,

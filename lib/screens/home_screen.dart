@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notes"),
+        title: const Text("My Notes"),
         actions: [
           PopupMenuButton<String>(
             onSelected: (tag) {
