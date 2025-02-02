@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/note.dart';
 import '../services/notes_storage.dart';
+import '../services/firebase_service.dart';
 import '../services/notification_service.dart';
 
 class NotesProvider with ChangeNotifier {
@@ -11,23 +12,20 @@ class NotesProvider with ChangeNotifier {
   List<Note> get notes {
     List<Note> filteredNotes = _notes;
 
-    
     if (_searchQuery.isNotEmpty) {
       filteredNotes = filteredNotes.where((note) =>
           note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           note.content.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
 
-    // Filter by selected categories
     if (_selectedTags.isNotEmpty) {
       filteredNotes = filteredNotes.where((note) =>
           _selectedTags.every((tag) => note.tags.contains(tag))).toList();
     }
 
-    // Pinned notes to appear at the top
     filteredNotes.sort((a, b) {
       if (a.isPinned == b.isPinned) {
-        return b.date.compareTo(a.date); // Sort by latest date
+        return b.date.compareTo(a.date);
       }
       return b.isPinned ? 1 : -1;
     });
@@ -47,7 +45,7 @@ class NotesProvider with ChangeNotifier {
 
   Future<void> loadNotes() async {
     try {
-      _notes = await NotesStorage.loadNotes();
+      _notes = await FirebaseService.loadNotesFromFirebase(); 
     } catch (e) {
       _notes = [];
     }
@@ -58,13 +56,13 @@ class NotesProvider with ChangeNotifier {
     await NotesStorage.saveNotes(_notes);
   }
 
-  
+
   void addNote(Note note) {
     _notes.add(note);
     _saveNotes();
     notifyListeners();
+    FirebaseService.syncNoteToFirebase(note); 
 
-    
     if (note.reminder != null) {
       NotificationService.scheduleNotification(
         note.id,
@@ -75,7 +73,7 @@ class NotesProvider with ChangeNotifier {
     }
   }
 
-
+ 
   void updateNote(String id, String newTitle, String newContent, List<String> newTags, bool isPinned) {
     final index = _notes.indexWhere((note) => note.id == id);
     if (index != -1) {
@@ -86,23 +84,22 @@ class NotesProvider with ChangeNotifier {
         date: DateTime.now(),
         tags: newTags,
         isPinned: isPinned,
-        reminder: _notes[index].reminder, // Keep the reminder
+        reminder: _notes[index].reminder,
       );
       _saveNotes();
       notifyListeners();
+      FirebaseService.syncNoteToFirebase(_notes[index]); 
     }
   }
 
- 
+
   void deleteNote(String id) {
     _notes.removeWhere((note) => note.id == id);
     _saveNotes();
     notifyListeners();
-
-    // Cancel notification if the note had a reminder
+    FirebaseService.deleteNoteFromFirebase(id); 
     NotificationService.cancelNotification(id);
   }
-
 
   void togglePinStatus(String id) {
     final index = _notes.indexWhere((note) => note.id == id);
@@ -110,9 +107,9 @@ class NotesProvider with ChangeNotifier {
       _notes[index].isPinned = !_notes[index].isPinned;
       _saveNotes();
       notifyListeners();
+      FirebaseService.syncNoteToFirebase(_notes[index]); 
     }
   }
-
 
   void setReminder(String id, DateTime? reminder) {
     final index = _notes.indexWhere((note) => note.id == id);
@@ -140,6 +137,7 @@ class NotesProvider with ChangeNotifier {
 
       _saveNotes();
       notifyListeners();
+      FirebaseService.syncNoteToFirebase(_notes[index]); 
     }
   }
 }

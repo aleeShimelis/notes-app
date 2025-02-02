@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<String> _selectedTags = [];
+  final List<String> _selectedTags = [];
 
   @override
   Widget build(BuildContext context) {
